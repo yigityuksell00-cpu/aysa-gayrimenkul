@@ -1,0 +1,594 @@
+{
+  "adminCredentials": {
+    "username": "murat",
+    "password": "123"
+  },
+  "users": [
+    {
+      "id": "u1",
+      "name": "Murat Özcan",
+      "role": "Patron / Ofis Sahibi",
+      "phone": "0532 111 22 33",
+      "avatar": "MÖ",
+      "isAdmin": true
+    },
+    {
+      "id": "u2",
+      "name": "Deniz Özdemir",
+      "role": "Gayrimenkul Danışmanı",
+      "phone": "0533 444 55 66",
+      "avatar": "DÖ",
+      "isAdmin": false
+    },
+    {
+      "id": "u3",
+      "name": "Şamil Deniz",
+      "role": "Gayrimenkul Danışmanı",
+      "phone": "0535 777 88 99",
+      "avatar": "ŞD",
+      "isAdmin": false
+    },
+    {
+      "id": "u4",
+      "name": "Oğuz İnşaat",
+      "role": "Proje & İnşaat Ortağı",
+      "phone": "0536 222 33 44",
+      "avatar": "Oİ",
+      "isAdmin": false
+    }
+  ],
+  "notifications": [
+    {
+      "id": "notif-1792779010630",
+      "sender": "Murat Özcan (Patron)",
+      "title": "test",
+      "message": "test",
+      "createdAt": "2026-10-23T18:10:10.631Z"
+    },
+    {
+      "id": "notif-1",
+      "sender": "Murat Özcan (Patron)",
+      "title": "Haftalık Ofis Toplantısı",
+      "message": "Pazartesi saat 10:30'da Altıeylül portföyleri ve yeni arsa talepleri için ofiste toplanıyoruz.",
+      "createdAt": "2026-10-23T14:00:00Z"
+    },
+    {
+      "id": "notif-2",
+      "sender": "Murat Özcan (Patron)",
+      "title": "Yeni Arsa Portföyü Eklendi",
+      "message": "Köseler Mh. 876 m² arsamız sisteme girildi. Mustafa Bey ve Ahmet Bey'e sunum yapabilirsiniz.",
+      "createdAt": "2026-10-23T16:30:00Z"
+    }
+  ],
+  "listings": [
+    {
+      "id": "lst-01",
+      "sira": 1,
+      "title": "Pamukçu Mh. Kanal Yanı Kadastro Yollu Tarla (545 m²)",
+      "type": "Tarla",
+      "status": "Satılık",
+      "price": 850000,
+      "m2": 545,
+      "rooms": "-",
+      "floor": "-",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "Pamukçu Mh.",
+      "ada": "244",
+      "parsel": "18",
+      "consultantId": "u2",
+      "consultantName": "Deniz Özdemir",
+      "consultantPhone": "0533 444 55 66",
+      "features": [
+        "Kadastro Yolu Var",
+        "Kanal Yanı",
+        "Ulaşımı Kolay"
+      ],
+      "internalNotes": "Ulaşımı çok kolay. Kadastro yolu açılmış. Yanında sulama kanalı geçiyor.",
+      "photos": [
+        "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-23T10:00:00Z",
+      "isNew": true
+    },
+    {
+      "id": "lst-02",
+      "sira": 2,
+      "title": "GOP Mh. Merkezi Konumda Fırsat Daire (2+1)",
+      "type": "Konut",
+      "status": "Satılık",
+      "price": 4500000,
+      "m2": 75,
+      "rooms": "2+1",
+      "floor": "2. Kat",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "GOP Mh.",
+      "ada": "",
+      "parsel": "",
+      "consultantId": "u2",
+      "consultantName": "Deniz Özdemir",
+      "consultantPhone": "0533 444 55 66",
+      "features": [
+        "Merkezi Konum",
+        "Balkonlu",
+        "Kombili"
+      ],
+      "internalNotes": "70 m² net / 80 m² brüt. Pazarlık payı cüzi.",
+      "photos": [
+        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-23T09:30:00Z",
+      "isNew": true
+    },
+    {
+      "id": "lst-03",
+      "sira": 6,
+      "title": "Köseler Mh. Yatırımlık İmarlı Müstakil Arsa (876 m²)",
+      "type": "Arsa",
+      "status": "Satılık",
+      "price": 7200000,
+      "m2": 876,
+      "rooms": "-",
+      "floor": "-",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "Köseler Mh.",
+      "ada": "113",
+      "parsel": "5",
+      "consultantId": "u1",
+      "consultantName": "Murat Özcan",
+      "consultantPhone": "0532 111 22 33",
+      "features": [
+        "Müstakil Parsel",
+        "Yola Cepheli",
+        "Elektrik Su Yakın"
+      ],
+      "internalNotes": "Murat Özcan portföyü. Ahmet Bey ve Mustafa Bey'e önerilebilir.",
+      "photos": [
+        "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-23T08:00:00Z",
+      "isNew": true
+    },
+    {
+      "id": "lst-04",
+      "sira": 7,
+      "title": "Gümüşçeşme Mh. Geniş Ferah Lüks Daire (2+1)",
+      "type": "Konut",
+      "status": "Satılık",
+      "price": 10350000,
+      "m2": 119,
+      "rooms": "2+1",
+      "floor": "3. Kat",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "Gümüşçeşme Mh.",
+      "ada": "",
+      "parsel": "",
+      "consultantId": "u3",
+      "consultantName": "Şamil Deniz",
+      "consultantPhone": "0535 777 88 99",
+      "features": [
+        "Asansörlü",
+        "Geniş Balkon",
+        "Ebeveyn Banyolu"
+      ],
+      "internalNotes": "78 net / 119 brüt. Çok temiz, masrafsız daire.",
+      "photos": [
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-22T17:00:00Z",
+      "isNew": true
+    },
+    {
+      "id": "lst-05",
+      "sira": 8,
+      "title": "Köseler Mh. Geniş Yatırımlık Tarla (2.354 m²)",
+      "type": "Tarla",
+      "status": "Satılık",
+      "price": 950000,
+      "m2": 2354,
+      "rooms": "-",
+      "floor": "-",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "Köseler Mh.",
+      "ada": "157",
+      "parsel": "59",
+      "consultantId": "u1",
+      "consultantName": "Murat Özcan",
+      "consultantPhone": "0532 111 22 33",
+      "features": [
+        "Geniş Parsel",
+        "Yolu Var",
+        "Yatırıma Uygun"
+      ],
+      "internalNotes": "2.354 m² tek tapu. Kelepir fiyat.",
+      "photos": [
+        "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-22T15:30:00Z",
+      "isNew": true
+    },
+    {
+      "id": "lst-06",
+      "sira": 10,
+      "title": "GOP Mh. Masrafsız Daire (2+1)",
+      "type": "Konut",
+      "status": "Satılık",
+      "price": 4100000,
+      "m2": 75,
+      "rooms": "2+1",
+      "floor": "1. Kat",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "GOP Mh.",
+      "ada": "",
+      "parsel": "",
+      "consultantId": "u1",
+      "consultantName": "Murat Özcan",
+      "consultantPhone": "0532 111 22 33",
+      "features": [
+        "GOP Merkez",
+        "Aydınlık",
+        "Kombili"
+      ],
+      "internalNotes": "70/80 m². Murat bey portföyü.",
+      "photos": [
+        "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-22T14:10:00Z",
+      "isNew": true
+    },
+    {
+      "id": "lst-07",
+      "sira": 11,
+      "title": "Yıldız Mh. Geniş Ferah Daire (2+1)",
+      "type": "Konut",
+      "status": "Satılık",
+      "price": 4400000,
+      "m2": 95,
+      "rooms": "2+1",
+      "floor": "3. Kat",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "Yıldız Mh.",
+      "ada": "",
+      "parsel": "",
+      "consultantId": "u2",
+      "consultantName": "Deniz Özdemir",
+      "consultantPhone": "0533 444 55 66",
+      "features": [
+        "89 net / 100 brüt",
+        "Asansörlü",
+        "Balkonlu"
+      ],
+      "internalNotes": "Yıldız mahallesinde aranan sokakta.",
+      "photos": [
+        "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-22T12:00:00Z",
+      "isNew": true
+    },
+    {
+      "id": "lst-08",
+      "sira": 12,
+      "title": "GOP Mh. 10 BURDA AVM Yakını Geniş Balkonlu Eşyalı (1+1)",
+      "type": "Konut",
+      "status": "Kiralık",
+      "price": 20000,
+      "m2": 48,
+      "rooms": "1+1",
+      "floor": "2. Kat",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "GOP Mh.",
+      "ada": "",
+      "parsel": "",
+      "consultantId": "u1",
+      "consultantName": "Murat Özcan",
+      "consultantPhone": "0532 111 22 33",
+      "features": [
+        "10 BURDA AVM Yakını",
+        "Full Eşyalı",
+        "Geniş Balkonlu"
+      ],
+      "internalNotes": "AVM ve üniversite minibüslerine çok yakın. Kurumsal kiracı tercih sebebi.",
+      "photos": [
+        "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-22T11:00:00Z",
+      "isNew": true
+    },
+    {
+      "id": "lst-09",
+      "sira": 13,
+      "title": "Plevne Mh. Geniş Aile Dairesi (3+1)",
+      "type": "Konut",
+      "status": "Satılık",
+      "price": 7400000,
+      "m2": 135,
+      "rooms": "3+1",
+      "floor": "2. Kat",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "Plevne Mh.",
+      "ada": "",
+      "parsel": "",
+      "consultantId": "u2",
+      "consultantName": "Deniz Özdemir",
+      "consultantPhone": "0533 444 55 66",
+      "features": [
+        "120 net / 145 brüt",
+        "Çift Balkon",
+        "Kombili"
+      ],
+      "internalNotes": "Plevne mahallesinde okul ve marketlere komşu.",
+      "photos": [
+        "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-22T10:15:00Z",
+      "isNew": true
+    },
+    {
+      "id": "lst-10",
+      "sira": 14,
+      "title": "Yıldız Mh. Köşe Konumda İmarlı Arsa (342 m²)",
+      "type": "Arsa",
+      "status": "Satılık",
+      "price": 5500000,
+      "m2": 342,
+      "rooms": "-",
+      "floor": "-",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "Yıldız Mh.",
+      "ada": "11326",
+      "parsel": "18",
+      "consultantId": "u2",
+      "consultantName": "Deniz Özdemir",
+      "consultantPhone": "0533 444 55 66",
+      "features": [
+        "İmarlı",
+        "Köşe Başında",
+        "İnşaata Hazır"
+      ],
+      "internalNotes": "Ada: 11326 / Parsel: 18. Müteahhit Mustafa Abi'ye sunulabilir.",
+      "photos": [
+        "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-21T16:00:00Z",
+      "isNew": false
+    },
+    {
+      "id": "lst-11",
+      "sira": 15,
+      "title": "Kasaplar Mh. Uygun Fiyatlı Fırsat Daire (3+1)",
+      "type": "Konut",
+      "status": "Satılık",
+      "price": 3450000,
+      "m2": 125,
+      "rooms": "3+1",
+      "floor": "3. Kat",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "Kasaplar Mh.",
+      "ada": "",
+      "parsel": "",
+      "consultantId": "u2",
+      "consultantName": "Deniz Özdemir",
+      "consultantPhone": "0533 444 55 66",
+      "features": [
+        "120 net / 130 brüt",
+        "Merkezi",
+        "Geniş"
+      ],
+      "internalNotes": "Fiyatı çok makul tutuldu, hızlı satılık.",
+      "photos": [
+        "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-21T14:00:00Z",
+      "isNew": false
+    },
+    {
+      "id": "lst-12",
+      "sira": 16,
+      "title": "Sütlüce Mh. Fırsat Daire (2+1)",
+      "type": "Konut",
+      "status": "Satılık",
+      "price": 2600000,
+      "m2": 62,
+      "rooms": "2+1",
+      "floor": "1. Kat",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "Sütlüce Mh.",
+      "ada": "",
+      "parsel": "",
+      "consultantId": "u2",
+      "consultantName": "Deniz Özdemir",
+      "consultantPhone": "0533 444 55 66",
+      "features": [
+        "Yatırımlık",
+        "Kira Getirisi Yüksek"
+      ],
+      "internalNotes": "60 net / 65 brüt. Yatırımcı için uygun.",
+      "photos": [
+        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-21T11:00:00Z",
+      "isNew": false
+    },
+    {
+      "id": "lst-13",
+      "sira": 17,
+      "title": "GOP Mh. Kiralık Temiz Daire (2+1)",
+      "type": "Konut",
+      "status": "Kiralık",
+      "price": 22000,
+      "m2": 80,
+      "rooms": "2+1",
+      "floor": "2. Kat",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "GOP Mh.",
+      "ada": "",
+      "parsel": "",
+      "consultantId": "u2",
+      "consultantName": "Deniz Özdemir",
+      "consultantPhone": "0533 444 55 66",
+      "features": [
+        "75 net / 85 brüt",
+        "Kombili",
+        "Balkonlu"
+      ],
+      "internalNotes": "Temiz aile kiracısı aranıyor.",
+      "photos": [
+        "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-20T16:00:00Z",
+      "isNew": false
+    },
+    {
+      "id": "lst-14",
+      "sira": 18,
+      "title": "Yıldız Mh. Bahçeli Müstakil Ev (2+1)",
+      "type": "Konut",
+      "status": "Satılık",
+      "price": 5500000,
+      "m2": 90,
+      "rooms": "2+1",
+      "floor": "Müstakil",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "Yıldız Mh.",
+      "ada": "",
+      "parsel": "",
+      "consultantId": "u2",
+      "consultantName": "Deniz Özdemir",
+      "consultantPhone": "0533 444 55 66",
+      "features": [
+        "Bahçeli",
+        "Müstakil Tapu",
+        "Geniş Alan"
+      ],
+      "internalNotes": "80 net / 100 brüt. Müstakil yaşamak isteyenler için.",
+      "photos": [
+        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-20T14:30:00Z",
+      "isNew": false
+    },
+    {
+      "id": "lst-15",
+      "sira": 22,
+      "title": "Bahçelievler Mh. Masrafsız Daire (1+1)",
+      "type": "Konut",
+      "status": "Satılık",
+      "price": 3600000,
+      "m2": 45,
+      "rooms": "1+1",
+      "floor": "2. Kat",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "Bahçelievler Mh.",
+      "ada": "",
+      "parsel": "",
+      "consultantId": "u1",
+      "consultantName": "Murat Özcan",
+      "consultantPhone": "0532 111 22 33",
+      "features": [
+        "42 net / 49 brüt",
+        "Yatırımlık",
+        "Kira Getirisi Yüksek"
+      ],
+      "internalNotes": "Murat bey portföyü. Bahçelievler'de çok iyi lokasyon.",
+      "photos": [
+        "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-20T11:00:00Z",
+      "isNew": false
+    },
+    {
+      "id": "lst-16",
+      "sira": 32,
+      "title": "Sarıalan Mh. Yola Cepheli Geniş Tarla (3.810 m²)",
+      "type": "Tarla",
+      "status": "Satılık",
+      "price": 2150000,
+      "m2": 3810,
+      "rooms": "-",
+      "floor": "-",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "Sarıalan Mh.",
+      "ada": "121",
+      "parsel": "116",
+      "consultantId": "u1",
+      "consultantName": "Murat Özcan",
+      "consultantPhone": "0532 111 22 33",
+      "features": [
+        "3.810 m²",
+        "Ada: 121 / Parsel: 116",
+        "Yola Cepheli"
+      ],
+      "internalNotes": "Ada: 121 / Parsel: 116. Sarıalan'da harika konumda.",
+      "photos": [
+        "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
+      ],
+      "createdAt": "2026-10-20T09:00:00Z",
+      "isNew": false
+    }
+  ],
+  "demands": [
+    {
+      "id": "dmd-01",
+      "sira": 1,
+      "clientName": "Mustafa Konuk",
+      "clientPhone": "0532 999 11 22",
+      "type": "Arsa",
+      "status": "Satılık",
+      "district": "Altıeylül",
+      "rooms": "-",
+      "budgetMin": 2500000,
+      "budgetMax": 3500000,
+      "consultantId": "u1",
+      "consultantName": "Murat Özcan",
+      "notes": "Daire yapmaya arsa arıyor. İmam Hatip civarı / Iraklı aile.",
+      "createdAt": "2026-10-23T11:00:00Z"
+    },
+    {
+      "id": "dmd-02",
+      "sira": 3,
+      "clientName": "Mustafa Abi Komşu",
+      "clientPhone": "0533 888 22 33",
+      "type": "Arsa",
+      "status": "Satılık",
+      "district": "Altıeylül",
+      "rooms": "-",
+      "budgetMin": 4000000,
+      "budgetMax": 8000000,
+      "consultantId": "u1",
+      "consultantName": "Murat Özcan",
+      "notes": "İnşaat yapmak için arsa arıyor, 1+1 daireler düşünülüyor.",
+      "createdAt": "2026-10-23T10:30:00Z"
+    },
+    {
+      "id": "dmd-03",
+      "sira": 4,
+      "clientName": "Ahmet Bey (Bandırmalı)",
+      "clientPhone": "0541 217 77 19",
+      "type": "Arsa",
+      "status": "Satılık",
+      "district": "Altıeylül",
+      "rooms": "-",
+      "budgetMin": 2000000,
+      "budgetMax": 10000000,
+      "consultantId": "u1",
+      "consultantName": "Murat Özcan",
+      "notes": "Serkan abinin arkadaşı, Bandırmalı. Al-sata her yeri alabilir. Kelepir arsa ve tarlalar öncelikli.",
+      "createdAt": "2026-10-23T09:00:00Z"
+    }
+  ]
+}

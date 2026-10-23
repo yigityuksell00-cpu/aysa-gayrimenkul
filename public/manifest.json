@@ -1,0 +1,22 @@
+{
+  "name": "AYSA Global Gayrimenkul - Ofis Havuzu",
+  "short_name": "AYSA Portföy",
+  "description": "AYSA Gayrimenkul yerel ofis içi ilan ve müşteri talep yönetim havuzu",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#14171a",
+  "theme_color": "#1b75bb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}
