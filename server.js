@@ -23,7 +23,44 @@ const uploadsDir = path.join(dataDir, 'uploads');
 if (!fs.existsSync(dataDir)) fs.mkdirSync(dataDir, { recursive: true });
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
-// Configure Multer for photo uploads
+// Turkish Character Normalization for flawless Search and Filters
+function trNormalize(str) {
+  if (!str) return '';
+  return String(str)
+    .toLocaleLowerCase('tr-TR')
+    .replace(/ı/g, 'i')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+    .trim();
+}
+
+// Base64 Data URL and Photo Array Processor
+function processPhotosArray(photos) {
+  if (!Array.isArray(photos)) return [];
+  return photos.map(p => {
+    if (typeof p === 'string' && p.startsWith('data:image/')) {
+      try {
+        const matches = p.match(/^data:image\/([a-zA-Z0-9+.-]+);base64,(.+)$/);
+        if (matches) {
+          const rawExt = matches[1].toLowerCase();
+          const ext = rawExt.includes('png') ? '.png' : (rawExt.includes('webp') ? '.webp' : '.jpg');
+          const buffer = Buffer.from(matches[2], 'base64');
+          const fileName = 'aysa_' + Date.now() + '_' + Math.round(Math.random() * 1e5) + ext;
+          fs.writeFileSync(path.join(uploadsDir, fileName), buffer);
+          return `/uploads/${fileName}`;
+        }
+      } catch (err) {
+        console.error('Base64 photo save error:', err);
+      }
+    }
+    return p;
+  }).filter(Boolean);
+}
+
+// Configure Multer for photo uploads with larger limit (50MB)
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, uploadsDir),
   filename: (req, file, cb) => {
@@ -34,7 +71,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({
   storage,
-  limits: { fileSize: 15 * 1024 * 1024 }
+  limits: { fileSize: 50 * 1024 * 1024 }
 });
 
 // Database Helper
@@ -102,8 +139,8 @@ function calculateMatches(listings, demands) {
     const matchedListings = listings.filter(item => {
       // Filter category (Konut / Arsa / Tarla / Ticari)
       if (demand.type && item.type) {
-        const dType = demand.type.toLowerCase();
-        const iType = item.type.toLowerCase();
+        const dType = trNormalize(demand.type);
+        const iType = trNormalize(item.type);
         if (dType === 'arsa' && (iType === 'arsa' || iType === 'tarla')) {
           // Arsa seekers are interested in arsa & tarla
         } else if (dType !== iType && !iType.includes(dType)) {
@@ -111,14 +148,14 @@ function calculateMatches(listings, demands) {
         }
       }
       // Status (Satılık / Kiralık)
-      if (demand.status && item.status.toLowerCase() !== demand.status.toLowerCase()) {
+      if (demand.status && trNormalize(item.status) !== trNormalize(demand.status)) {
         return false;
       }
       // District / City match
       if (demand.district) {
-        const itemLocation = `${item.city || ''} ${item.district || ''} ${item.neighborhood || ''}`.toLowerCase();
-        const demandLoc = demand.district.toLowerCase();
-        if (!itemLocation.includes(demandLoc) && !demandLoc.includes((item.district || '').toLowerCase())) {
+        const itemLocation = trNormalize(`${item.city || ''} ${item.district || ''} ${item.neighborhood || ''}`);
+        const demandLoc = trNormalize(demand.district);
+        if (!itemLocation.includes(demandLoc) && !demandLoc.includes(trNormalize(item.district || ''))) {
           return false;
         }
       }
@@ -126,7 +163,7 @@ function calculateMatches(listings, demands) {
       if (demand.budgetMax && item.price > demand.budgetMax * 1.2) { // 20% bargaining room
         return false;
       }
-      if (demand.budgetMin && item.price < demand.budgetMin * 0.5) {
+      if (demand.budgetMin && item.price < demand.budgetMin * 0.4) {
         return false;
       }
       return true;
@@ -163,8 +200,17 @@ function calculateMatches(listings, demands) {
 // Server Info & Mobile Connection QR Code
 app.get('/api/info', async (req, res) => {
   const localIP = getLocalIP();
+  const isRender = process.env.RENDER === 'true' || !!process.env.RENDER_EXTERNAL_URL;
+  
+  // Detect public URL (Render environment variable or forwarded host headers)
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+  const detectedPublicUrl = host ? `${protocol}://${host}` : null;
+  const isCloudHost = host && !host.includes('localhost') && !host.includes('127.0.0.1');
+
+  const publicUrl = process.env.RENDER_EXTERNAL_URL || (isCloudHost ? detectedPublicUrl : null);
   const localUrl = `http://localhost:${PORT}`;
-  const networkUrl = `http://${localIP}:${PORT}`;
+  const networkUrl = publicUrl || `http://${localIP}:${PORT}`;
   
   let qrCodeData = null;
   try {
@@ -185,22 +231,25 @@ app.get('/api/info', async (req, res) => {
     port: PORT,
     localUrl,
     networkUrl,
+    publicUrl: networkUrl,
+    isRender,
     localIP,
     qrCodeData
   });
 });
 
-// Admin Auth Endpoint (Murat Özcan Patron Login)
+// Admin Auth Endpoint (Yönetim Giriş - admin / 2026)
 app.post('/api/admin/login', (req, res) => {
   const { username, password } = req.body;
   const db = readDB();
-  const creds = db.adminCredentials || { username: 'murat', password: '123' };
+  const creds = db.adminCredentials || { username: 'admin', password: '2026' };
 
   if (username === creds.username && password === creds.password) {
-    const muratUser = (db.users || []).find(u => u.id === 'u1') || {
+    const muratUser = (db.users || []).find(u => u.id === 'u1' || u.isAdmin) || {
       id: 'u1',
       name: 'Murat Özcan',
-      role: 'Patron / Ofis Sahibi',
+      role: 'MURAT ÖZCAN (ADMİN)',
+      avatar: 'MÖ',
       isAdmin: true
     };
     return res.json({
@@ -213,7 +262,7 @@ app.post('/api/admin/login', (req, res) => {
   return res.status(401).json({ success: false, error: 'Hatalı kullanıcı adı veya şifre!' });
 });
 
-// Notifications Endpoint (Patron Ekibe Mobil Bildirim Gönderme)
+// Notifications Endpoint
 app.get('/api/notifications', (req, res) => {
   const db = readDB();
   res.json(db.notifications || []);
@@ -228,7 +277,7 @@ app.post('/api/notifications', (req, res) => {
   const db = readDB();
   const newNotif = {
     id: 'notif-' + Date.now(),
-    sender: sender || 'Murat Özcan (Patron)',
+    sender: sender || 'MURAT ÖZCAN (ADMİN)',
     title,
     message,
     createdAt: new Date().toISOString()
@@ -243,10 +292,53 @@ app.post('/api/notifications', (req, res) => {
   res.status(201).json(newNotif);
 });
 
-// Users (Murat Özcan, Deniz Özdemir, Şamil Deniz, Oğuz İnşaat)
+// Users List (Danışmanlar ve Yönetici)
 app.get('/api/users', (req, res) => {
   const db = readDB();
   res.json(db.users || []);
+});
+
+// Add New Consultant (Danışman Ekle)
+app.post('/api/users', (req, res) => {
+  const { name, role, phone } = req.body;
+  if (!name || !name.trim()) {
+    return res.status(400).json({ error: 'Danışman adı zorunludur' });
+  }
+
+  const db = readDB();
+  db.users = db.users || [];
+
+  const parts = name.trim().split(/\s+/);
+  const initials = parts.length >= 2 
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : parts[0].substring(0, 2).toUpperCase();
+
+  const newUser = {
+    id: 'u' + Date.now(),
+    name: name.trim(),
+    role: role && role.trim() ? role.trim() : 'Gayrimenkul Danışmanı',
+    phone: phone ? phone.trim() : '',
+    avatar: initials,
+    isAdmin: false
+  };
+
+  db.users.push(newUser);
+  writeDB(db);
+  res.status(201).json(newUser);
+});
+
+// Delete Consultant (Danışman Sil - Sadece admin yetkisiyle, u1 korumalı)
+app.delete('/api/users/:id', (req, res) => {
+  const db = readDB();
+  const user = (db.users || []).find(u => u.id === req.params.id);
+  if (!user) return res.status(404).json({ error: 'Danışman bulunamadı' });
+  if (user.isAdmin || user.id === 'u1') {
+    return res.status(400).json({ error: 'Yönetici hesabı silinemez!' });
+  }
+
+  db.users = (db.users || []).filter(u => u.id !== req.params.id);
+  writeDB(db);
+  res.json({ success: true, message: 'Danışman silindi' });
 });
 
 // Listings (İlan Havuzu)
@@ -257,23 +349,24 @@ app.get('/api/listings', (req, res) => {
   const { search, type, status, consultantId, minPrice, maxPrice, sort } = req.query;
 
   if (search) {
-    const q = search.toLowerCase();
+    const q = trNormalize(search);
     list = list.filter(item => 
-      (item.title && item.title.toLowerCase().includes(q)) ||
-      (item.district && item.district.toLowerCase().includes(q)) ||
-      (item.neighborhood && item.neighborhood.toLowerCase().includes(q)) ||
-      (item.ada && item.ada.includes(q)) ||
-      (item.parsel && item.parsel.includes(q)) ||
-      (item.consultantName && item.consultantName.toLowerCase().includes(q))
+      trNormalize(item.title).includes(q) ||
+      trNormalize(item.district).includes(q) ||
+      trNormalize(item.neighborhood).includes(q) ||
+      String(item.ada || '').includes(search.trim()) ||
+      String(item.parsel || '').includes(search.trim()) ||
+      trNormalize(item.consultantName).includes(q) ||
+      trNormalize(item.type).includes(q)
     );
   }
 
   if (type && type !== 'all') {
-    list = list.filter(item => item.type.toLowerCase() === type.toLowerCase());
+    list = list.filter(item => trNormalize(item.type) === trNormalize(type));
   }
 
   if (status && status !== 'all') {
-    list = list.filter(item => item.status.toLowerCase() === status.toLowerCase());
+    list = list.filter(item => trNormalize(item.status) === trNormalize(status));
   }
 
   if (consultantId && consultantId !== 'all') {
@@ -300,17 +393,65 @@ app.get('/api/listings', (req, res) => {
   res.json(list);
 });
 
-// Single Listing
+// Single Listing (client=1 modunda gizli iç notlar maskelenir)
 app.get('/api/listings/:id', (req, res) => {
   const db = readDB();
   const item = (db.listings || []).find(l => l.id === req.params.id);
   if (!item) return res.status(404).json({ error: 'İlan bulunamadı' });
+
+  if (req.query.client === '1') {
+    const clientSafe = { ...item };
+    delete clientSafe.internalNotes;
+    clientSafe.isClientView = true;
+    return res.json(clientSafe);
+  }
+
   res.json(item);
+});
+
+// Listing Customer Presentation QR Code
+app.get('/api/listings/:id/qr', async (req, res) => {
+  const db = readDB();
+  const item = (db.listings || []).find(l => l.id === req.params.id);
+  if (!item) return res.status(404).json({ error: 'İlan bulunamadı' });
+
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+  const isCloudHost = host && !host.includes('localhost') && !host.includes('127.0.0.1');
+  const publicBase = process.env.RENDER_EXTERNAL_URL || (isCloudHost ? `${protocol}://${host}` : `http://${getLocalIP()}:${PORT}`);
+
+  const clientUrl = `${publicBase}/?listing=${item.id}&client=1`;
+
+  try {
+    const qrData = await QRCode.toDataURL(clientUrl, {
+      margin: 2,
+      width: 320,
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff'
+      }
+    });
+
+    res.json({
+      success: true,
+      clientUrl,
+      qrData,
+      title: item.title,
+      price: item.price,
+      consultantName: item.consultantName,
+      consultantPhone: item.consultantPhone
+    });
+  } catch (err) {
+    console.error('Listing QR error:', err);
+    res.status(500).json({ error: 'QR kod oluşturulamadı' });
+  }
 });
 
 // Create Listing
 app.post('/api/listings', (req, res) => {
   const db = readDB();
+  const processedPhotos = processPhotosArray(req.body.photos);
+
   const newListing = {
     id: 'lst-' + Date.now(),
     sira: (db.listings && db.listings.length ? db.listings.length + 1 : 1),
@@ -331,7 +472,7 @@ app.post('/api/listings', (req, res) => {
     consultantPhone: req.body.consultantPhone || '0532 111 22 33',
     features: Array.isArray(req.body.features) ? req.body.features : [],
     internalNotes: req.body.internalNotes || '',
-    photos: Array.isArray(req.body.photos) && req.body.photos.length > 0 ? req.body.photos : [
+    photos: processedPhotos.length > 0 ? processedPhotos : [
       'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80'
     ],
     createdAt: new Date().toISOString(),
@@ -351,9 +492,16 @@ app.put('/api/listings/:id', (req, res) => {
   const idx = (db.listings || []).findIndex(l => l.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'İlan bulunamadı' });
 
+  const updateData = { ...req.body };
+  if (updateData.photos) {
+    updateData.photos = processPhotosArray(updateData.photos);
+  }
+  if (updateData.price !== undefined) updateData.price = Number(updateData.price);
+  if (updateData.m2 !== undefined) updateData.m2 = Number(updateData.m2);
+
   db.listings[idx] = {
     ...db.listings[idx],
-    ...req.body,
+    ...updateData,
     updatedAt: new Date().toISOString()
   };
   writeDB(db);
@@ -447,17 +595,41 @@ app.get('/api/stats', (req, res) => {
   });
 });
 
-// Image Upload Endpoint (Multer)
-app.post('/api/upload', upload.array('photos', 10), (req, res) => {
-  if (!req.files || req.files.length === 0) {
-    return res.status(400).json({ error: 'Yüklenecek dosya seçilmedi' });
+// Image Upload Endpoint (Multer with Error Handling & Base64 JSON support)
+app.post('/api/upload', (req, res) => {
+  // Check if body contains JSON base64 images
+  if (req.body && req.body.images && Array.isArray(req.body.images)) {
+    const urls = processPhotosArray(req.body.images);
+    return res.json({ urls });
   }
 
-  const fileUrls = req.files.map(file => `/uploads/${file.filename}`);
-  res.json({ urls: fileUrls });
+  // Handle multipart/form-data
+  upload.array('photos', 25)(req, res, (err) => {
+    if (err) {
+      console.error('Multer upload error:', err);
+      return res.status(400).json({ error: 'Fotoğraf yüklenemedi: ' + (err.message || 'Dosya boyutu hatası') });
+    }
+
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'Yüklenecek dosya seçilmedi' });
+    }
+
+    const fileUrls = req.files.map(file => `/uploads/${file.filename}`);
+    res.json({ urls: fileUrls });
+  });
 });
 
-// Fallback to index.html (Express 5 compatible)
+// Explicit 404 for API endpoints (Express 5 syntax)
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'Endpoint bulunamadı' });
+});
+
+// Explicit 404 for missing static uploads
+app.use('/uploads', (req, res) => {
+  res.status(404).send('Fotoğraf bulunamadı');
+});
+
+// Fallback to index.html (Express 5 SPA fallback)
 app.use((req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

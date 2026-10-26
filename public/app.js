@@ -6,6 +6,7 @@
 let state = {
   currentUser: null,
   isAdminLoggedIn: false,
+  isClientView: false,
   users: [],
   listings: [],
   demands: [],
@@ -21,8 +22,24 @@ let state = {
     consultantId: 'all'
   },
   newPhotos: [],
+  editPhotos: [],
+  isUploading: false,
   serverInfo: null
 };
+
+// Turkish Character Normalization for Search & Filter
+function trNormalize(str) {
+  if (!str) return '';
+  return String(str)
+    .toLocaleLowerCase('tr-TR')
+    .replace(/ı/g, 'i')
+    .replace(/ğ/g, 'g')
+    .replace(/ü/g, 'u')
+    .replace(/ş/g, 's')
+    .replace(/ö/g, 'o')
+    .replace(/ç/g, 'c')
+    .trim();
+}
 
 // --- INITIALIZATION ---
 document.addEventListener('DOMContentLoaded', async () => {
@@ -41,6 +58,18 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Periodic notification check (every 5 seconds)
   setInterval(checkNewNotifications, 5000);
+
+  // Check URL params for direct listing sharing (?listing=lst-XX or #lst-XX)
+  const urlParams = new URLSearchParams(window.location.search);
+  const targetId = urlParams.get('listing') || (window.location.hash ? window.location.hash.substring(1) : null);
+  if (urlParams.get('client') === '1') {
+    state.isClientView = true;
+  }
+  if (targetId) {
+    setTimeout(() => {
+      openListingDetail(targetId);
+    }, 400);
+  }
 
   // Register Service Worker for PWA
   if ('serviceWorker' in navigator) {
@@ -80,8 +109,8 @@ async function loadUsers() {
 
     const savedUserId = localStorage.getItem('aysa_active_user_id');
     const matched = state.users.find(u => u.id === savedUserId);
-    // Default to Murat Özcan (Patron)
-    state.currentUser = matched || state.users[0] || { name: 'Murat Özcan', role: 'Patron', id: 'u1', avatar: 'MÖ' };
+    // Default to Murat Özcan (Admin)
+    state.currentUser = matched || state.users[0] || { name: 'Murat Özcan', role: 'MURAT ÖZCAN (ADMİN)', id: 'u1', avatar: 'MÖ', isAdmin: true };
 
     updateCurrentUserUI();
     populateConsultantDropdowns();
@@ -92,9 +121,189 @@ async function loadUsers() {
 
 function updateCurrentUserUI() {
   if (!state.currentUser) return;
-  document.getElementById('current-user-avatar').innerText = state.currentUser.avatar || state.currentUser.name.substring(0, 2);
-  const adminBadge = state.currentUser.id === 'u1' && state.isAdminLoggedIn ? ' 👑 (Patron)' : '';
-  document.getElementById('current-user-name').innerText = state.currentUser.name + adminBadge;
+  const avatarEl = document.getElementById('current-user-avatar');
+  if (avatarEl) avatarEl.innerText = state.currentUser.avatar || state.currentUser.name.substring(0, 2);
+  const nameEl = document.getElementById('current-user-name');
+  if (nameEl) {
+    if (state.currentUser.isAdmin || state.currentUser.id === 'u1') {
+      nameEl.innerText = 'MURAT ÖZCAN (ADMİN)';
+    } else {
+      nameEl.innerText = `${state.currentUser.name} (${state.currentUser.role || 'Danışman'})`;
+    }
+  }
+}
+
+function handleUserBtnClick() {
+  if (!state.isAdminLoggedIn && (!state.currentUser || !state.currentUser.isAdmin)) {
+    document.getElementById('admin-user-input').value = '';
+    document.getElementById('admin-pass-input').value = '';
+    openModal('modal-admin-login');
+  } else {
+    // If admin is active, allow switching user
+    const list = state.users.map((u, i) => `${i + 1}) ${u.name} - ${u.role}`).join('\n');
+    const input = prompt(`Aktif Kullanıcı: ${state.currentUser.name}\n\nKullanıcı değiştirmek için sıra no yazın:\n${list}\n\n(Yönetici oturumunu kapatmak için 'cikis' yazın)`);
+    if (input === 'cikis') {
+      state.isAdminLoggedIn = false;
+      localStorage.removeItem('aysa_admin_token');
+      const nonAdmin = state.users.find(u => !u.isAdmin) || state.users[1] || state.users[0];
+      state.currentUser = nonAdmin;
+      localStorage.setItem('aysa_active_user_id', nonAdmin.id);
+      updateCurrentUserUI();
+      populateConsultantDropdowns();
+      alert('Yönetici oturumu kapatıldı.');
+    } else if (input) {
+      const idx = parseInt(input.trim()) - 1;
+      if (idx >= 0 && idx < state.users.length) {
+        state.currentUser = state.users[idx];
+        localStorage.setItem('aysa_active_user_id', state.currentUser.id);
+        updateCurrentUserUI();
+        populateConsultantDropdowns();
+        alert(`Aktif kullanıcı: ${state.currentUser.name}`);
+      }
+    }
+  }
+}
+
+async function handleAdminLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('admin-user-input').value.trim();
+  const password = document.getElementById('admin-pass-input').value.trim();
+
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    const data = await res.json();
+    if (res.ok && data.success) {
+      state.isAdminLoggedIn = true;
+      state.currentUser = data.user;
+      localStorage.setItem('aysa_active_user_id', data.user.id);
+      localStorage.setItem('aysa_admin_token', data.token);
+
+      updateCurrentUserUI();
+      populateConsultantDropdowns();
+      closeModal('modal-admin-login');
+      alert('Yönetim Girişi Başarılı! (Admin yetkileri aktif)');
+      await loadListings();
+      await loadStats();
+    } else {
+      alert(data.error || 'Hatalı kullanıcı adı veya şifre!');
+      document.getElementById('admin-pass-input').value = '';
+    }
+  } catch (err) {
+    console.error('Login error:', err);
+    alert('Giriş yapılırken sunucu hatası oluştu.');
+  }
+}
+
+function openAddConsultantModal() {
+  if (!state.isAdminLoggedIn && (!state.currentUser || !state.currentUser.isAdmin)) {
+    alert('Danışman eklemek için lütfen önce Yönetim Girişi yapınız.');
+    openModal('modal-admin-login');
+    return;
+  }
+  document.getElementById('new-consultant-name').value = '';
+  document.getElementById('new-consultant-phone').value = '';
+  openModal('modal-add-consultant');
+}
+
+async function handleAddConsultant(e) {
+  e.preventDefault();
+  const name = document.getElementById('new-consultant-name').value.trim();
+  const role = document.getElementById('new-consultant-role').value.trim();
+  const phone = document.getElementById('new-consultant-phone').value.trim();
+
+  if (!name) return alert('Danışman adı zorunludur.');
+
+  try {
+    const res = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, role, phone })
+    });
+
+    if (res.ok) {
+      closeModal('modal-add-consultant');
+      await loadUsers();
+      await loadStats();
+      alert(`Danışman "${name}" başarıyla eklendi!`);
+    } else {
+      const err = await res.json();
+      alert(err.error || 'Danışman eklenirken hata oluştu.');
+    }
+  } catch (err) {
+    console.error('Add consultant error:', err);
+  }
+}
+
+async function deleteConsultant(id) {
+  if (!state.isAdminLoggedIn && (!state.currentUser || !state.currentUser.isAdmin)) {
+    alert('Danışman silmek için Yönetim Girişi yapmalısınız.');
+    openModal('modal-admin-login');
+    return;
+  }
+  if (!confirm('Bu danışmanı ofis kadrosundan silmek istediğinize emin misiniz?')) return;
+
+  try {
+    const res = await fetch(`/api/users/${id}`, { method: 'DELETE' });
+    if (res.ok) {
+      await loadUsers();
+      await loadStats();
+      alert('Danışman silindi.');
+    } else {
+      const err = await res.json();
+      alert(err.error || 'Danışman silinemedi.');
+    }
+  } catch (err) {
+    console.error('Delete consultant error:', err);
+  }
+}
+
+let activeClientQrInfo = null;
+
+async function openListingQrModal(listingId) {
+  const item = state.listings.find(l => l.id === listingId);
+  if (!item) return;
+
+  try {
+    const res = await fetch(`/api/listings/${listingId}/qr`);
+    const data = await res.json();
+    if (data.success && data.qrData) {
+      activeClientQrInfo = data;
+      document.getElementById('listing-qr-image').src = data.qrData;
+      document.getElementById('listing-qr-modal-title').innerText = `📲 ${item.title.substring(0, 24)}... QR Kodu`;
+      openModal('modal-listing-qr');
+    } else {
+      alert('QR kod oluşturulamadı.');
+    }
+  } catch (err) {
+    console.error('QR fetch error:', err);
+    alert('QR kod sunucu hatası.');
+  }
+}
+
+function copyClientLinkFromQR() {
+  if (!activeClientQrInfo || !activeClientQrInfo.clientUrl) return;
+  navigator.clipboard.writeText(activeClientQrInfo.clientUrl).then(() => {
+    alert('Müşteri sunum linki panoya kopyalandı:\n' + activeClientQrInfo.clientUrl);
+  }).catch(() => {
+    prompt('Müşteri linkini kopyalayabilirsiniz:', activeClientQrInfo.clientUrl);
+  });
+}
+
+function shareWhatsAppFromQR() {
+  if (!activeClientQrInfo || !activeClientQrInfo.clientUrl) return;
+  const msg = encodeURIComponent(
+    `🏢 *AYSA GAYRİMENKUL PORTFÖY SUNUMU*\n\n` +
+    `📍 *${activeClientQrInfo.title}*\n` +
+    `💰 *Fiyat:* ${formatTL(activeClientQrInfo.price)}\n` +
+    `👤 *Danışman:* ${activeClientQrInfo.consultantName || 'Murat Özcan'} (${activeClientQrInfo.consultantPhone || ''})\n\n` +
+    `🔗 *Detaylı Fotoğraf ve Parsel Bilgileri:*\n${activeClientQrInfo.clientUrl}`
+  );
+  window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
 }
 
 function populateConsultantDropdowns() {
@@ -183,8 +392,8 @@ function openNotificationsModal() {
 }
 
 function openBroadcastModal() {
-  if (!state.isAdminLoggedIn && state.currentUser.id !== 'u1') {
-    alert('Bu özelliği sadece Patron Murat Özcan kullanabilir. Lütfen önce patron girişi yapın.');
+  if (!state.isAdminLoggedIn && (!state.currentUser || !state.currentUser.isAdmin)) {
+    alert('Bu özelliği sadece MURAT ÖZCAN (ADMİN) kullanabilir. Lütfen önce Yönetim Girişi yapın.');
     openModal('modal-admin-login');
     return;
   }
@@ -203,7 +412,7 @@ async function handleSendBroadcast(e) {
       body: JSON.stringify({
         title,
         message,
-        sender: 'Murat Özcan (Patron)'
+        sender: 'MURAT ÖZCAN (ADMİN)'
       })
     });
 
@@ -217,46 +426,6 @@ async function handleSendBroadcast(e) {
   } catch (err) {
     console.error('Broadcast error:', err);
     alert('Bildirim gönderilirken hata oluştu.');
-  }
-}
-
-// --- ADMIN AUTH (MURAT ÖZCAN LOGIN) ---
-function handleUserBtnClick() {
-  if (state.currentUser.id === 'u1' && !state.isAdminLoggedIn) {
-    openModal('modal-admin-login');
-  } else {
-    openUserModal();
-  }
-}
-
-async function handleAdminLogin(e) {
-  e.preventDefault();
-  const username = document.getElementById('admin-user-input').value.trim();
-  const password = document.getElementById('admin-pass-input').value.trim();
-
-  try {
-    const res = await fetch('/api/admin/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    });
-
-    const data = await res.json();
-    if (data.success) {
-      state.isAdminLoggedIn = true;
-      localStorage.setItem('aysa_admin_token', data.token);
-      state.currentUser = state.users.find(u => u.id === 'u1') || state.currentUser;
-      localStorage.setItem('aysa_active_user_id', 'u1');
-      updateCurrentUserUI();
-      closeModal('modal-admin-login');
-      alert('👑 Hoş geldiniz Murat Bey! Patron yetkileriniz aktif edildi.');
-      switchTab('murat');
-    } else {
-      alert('❌ ' + (data.error || 'Giriş başarısız'));
-    }
-  } catch (err) {
-    console.error('Admin login error:', err);
-    alert('Sunucuya bağlanılamadı.');
   }
 }
 
@@ -369,19 +538,47 @@ function handleFabClick() {
 function handleSearch() {
   const query = document.getElementById('search-input').value.trim();
   state.filters.search = query;
+  updateFilterResetButton();
   loadListings();
 }
 
 function setChipFilter(key, value, el) {
   if (state.filters[key] === value && value !== 'all') {
     state.filters[key] = 'all';
-    el.classList.remove('active');
+    if (el) el.classList.remove('active');
   } else {
     state.filters[key] = value;
     const parent = el.parentElement;
     parent.querySelectorAll(`[data-${key}]`).forEach(chip => chip.classList.remove('active'));
     el.classList.add('active');
   }
+  updateFilterResetButton();
+  loadListings();
+}
+
+function updateFilterResetButton() {
+  const isAnyFilter = state.filters.type !== 'all' || state.filters.status !== 'all' || (state.filters.search && state.filters.search.length > 0);
+  const chipAll = document.getElementById('chip-all');
+  const btnClear = document.getElementById('btn-clear-filters');
+  if (chipAll) chipAll.classList.toggle('active', !isAnyFilter);
+  if (btnClear) btnClear.style.display = isAnyFilter ? 'inline-block' : 'none';
+}
+
+function clearAllFilters() {
+  state.filters.type = 'all';
+  state.filters.status = 'all';
+  state.filters.search = '';
+  state.filters.consultantId = 'all';
+
+  const searchInput = document.getElementById('search-input');
+  if (searchInput) searchInput.value = '';
+
+  document.querySelectorAll('.chip-item').forEach(c => c.classList.remove('active'));
+  const chipAll = document.getElementById('chip-all');
+  if (chipAll) chipAll.classList.add('active');
+  const btnClear = document.getElementById('btn-clear-filters');
+  if (btnClear) btnClear.style.display = 'none';
+
   loadListings();
 }
 
@@ -396,16 +593,25 @@ function renderStories() {
     return;
   }
 
-  container.innerHTML = newest.map(item => `
-    <div class="story-card" onclick="openListingDetail('${item.id}')">
-      <div class="story-badge">YENİ</div>
-      <img src="${(item.photos && item.photos[0]) || '/aysa_logo.png'}" class="story-img" alt="${item.title}">
-      <div class="story-info">
-        <div class="story-price">${formatTL(item.price)}</div>
-        <div class="story-title">${item.title}</div>
+  container.innerHTML = newest.map(item => {
+    const hasPhoto = item.photos && item.photos.length > 0;
+    return `
+      <div class="story-card" onclick="openListingDetail('${item.id}')">
+        <div class="story-badge">YENİ</div>
+        ${hasPhoto ? `
+          <img src="${item.photos[0]}" class="story-img" alt="${item.title}" onerror="this.onerror=null;this.src='/aysa_logo.png'">
+        ` : `
+          <div class="story-img" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); display: flex; align-items: center; justify-content: center; width: 100%; height: 100%;">
+            <img src="/aysa_logo.png" style="width: 38px; height: 38px; object-fit: contain; opacity: 0.85;">
+          </div>
+        `}
+        <div class="story-info">
+          <div class="story-price">${formatTL(item.price)}</div>
+          <div class="story-title">${item.title}</div>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 }
 
 // --- RENDER LISTINGS (İLAN HAVUZU) ---
@@ -414,33 +620,53 @@ function renderListings() {
   if (!container) return;
 
   if (state.listings.length === 0) {
+    const isFiltered = (state.filterType && state.filterType !== 'all') || 
+                       (state.filterStatus && state.filterStatus !== 'all') || 
+                       (state.filterDistrict && state.filterDistrict !== 'all') || 
+                       (state.searchQuery && state.searchQuery.trim().length > 0);
     container.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 50px 20px; background: #1a1e24; border-radius: 16px; border: 1px dashed #2e3540;">
-        <div style="font-size: 2.5rem; margin-bottom: 10px;">🔍</div>
-        <h3 style="color: #fff; margin-bottom: 6px;">Eşleşen Portföy Bulunamadı</h3>
-        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 16px;">Arama kriterlerini temizleyin veya yeni bir ilan ekleyin.</p>
-        <button class="btn-primary" onclick="openAddListingModal()">+ İlk İlanı Ekle</button>
+      <div style="grid-column: 1/-1; text-align: center; padding: 60px 20px; background: #1a1e24; border-radius: 16px; border: 1px dashed #2e3540;">
+        <div style="font-size: 3rem; margin-bottom: 12px;">${isFiltered ? '🔍' : '🏢'}</div>
+        <h3 style="color: #fff; margin-bottom: 8px; font-size: 1.25rem;">${isFiltered ? 'Kriterlere Uygun İlan Bulunamadı' : 'AYSA Gayrimenkul Portföy Havuzu'}</h3>
+        <p style="color: #94a3b8; font-size: 0.92rem; margin-bottom: 20px; max-width: 420px; margin-left: auto; margin-right: auto;">
+          ${isFiltered ? 'Arama kriterlerini temizleyerek tüm ilanları tekrar listeleyebilirsiniz.' : 'Sisteminiz kullanıma hazırdır. İlk satılık veya kiralık gayrimenkulünüzü ekleyerek başlayabilirsiniz.'}
+        </p>
+        ${isFiltered 
+          ? '<button class="btn-primary" onclick="clearAllFilters()">Filtreleri Temizle</button>' 
+          : '<button class="btn-primary" onclick="openAddListingModal()" style="padding: 12px 24px; font-size: 1rem;">➕ İlk İlanı Ekle</button>'}
       </div>
     `;
     return;
   }
 
   container.innerHTML = state.listings.map(item => {
-    const photo = (item.photos && item.photos[0]) || '/aysa_logo.png';
+    const hasPhoto = item.photos && item.photos.length > 0;
     const hasAdaParsel = item.ada || item.parsel;
     const parselText = hasAdaParsel ? `Ada: ${item.ada || '-'} / Parsel: ${item.parsel || '-'}` : null;
-    const isSatilik = (item.status || '').toLowerCase() === 'satılık';
+    const isSatilik = trNormalize(item.status).includes('sat');
 
     return `
       <div class="property-card" onclick="openListingDetail('${item.id}')">
-        <div class="card-image-box">
-          <img src="${photo}" class="card-image" alt="${item.title}" loading="lazy">
-          <div class="card-overlay-badges">
-            <span class="badge-tag ${isSatilik ? 'satilik' : 'kiralik'}">${item.status}</span>
-            <span class="badge-tag">${item.type}</span>
+        ${hasPhoto ? `
+          <div class="card-image-box">
+            <img src="${item.photos[0]}" class="card-image" alt="${item.title}" loading="lazy" onerror="this.onerror=null;this.src='/aysa_logo.png'">
+            <div class="card-overlay-badges">
+              <span class="badge-tag ${isSatilik ? 'satilik' : 'kiralik'}">${item.status}</span>
+              <span class="badge-tag">${item.type}</span>
+            </div>
+            ${parselText ? `<div class="parsel-badge">📐 ${parselText}</div>` : ''}
           </div>
-          ${parselText ? `<div class="parsel-badge">📐 ${parselText}</div>` : ''}
-        </div>
+        ` : `
+          <div class="card-image-box" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; height: 180px; position: relative;">
+            <img src="/aysa_logo.png" style="height: 48px; object-fit: contain; opacity: 0.85; margin-bottom: 6px;">
+            <span style="font-size: 0.72rem; color: #94a3b8; background: rgba(0,0,0,0.5); padding: 3px 8px; border-radius: 6px;">📷 Fotoğraf Bekleniyor</span>
+            <div class="card-overlay-badges">
+              <span class="badge-tag ${isSatilik ? 'satilik' : 'kiralik'}">${item.status}</span>
+              <span class="badge-tag">${item.type}</span>
+            </div>
+            ${parselText ? `<div class="parsel-badge">📐 ${parselText}</div>` : ''}
+          </div>
+        `}
 
         <div class="card-body">
           <div class="card-price-row">
@@ -481,14 +707,18 @@ function renderListings() {
             </div>
 
             <div class="card-quick-actions" onclick="event.stopPropagation()">
-              <button class="icon-btn" title="PDF Broşür Çıktısı" onclick="printSingleListingPDF('${item.id}')">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+              <button class="icon-btn" title="WhatsApp ile Paylaş" style="color: #10b981;" onclick="shareListingWhatsApp('${item.id}')">
+                💬
               </button>
-              ${hasAdaParsel ? `
-                <a class="icon-btn" title="TKGM Parsel Sorgula" href="https://parselsorgu.tkgm.gov.tr/" target="_blank">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"></polygon></svg>
-                </a>
-              ` : ''}
+              <button class="icon-btn" title="Müşteri Linkini Kopyala" onclick="copyListingLink('${item.id}')">
+                🔗
+              </button>
+              <button class="icon-btn" title="İlanı Düzenle" style="color: #f59e0b;" onclick="openEditListingModal('${item.id}')">
+                ✏️
+              </button>
+              <button class="icon-btn" title="PDF Broşür Çıktısı" onclick="printSingleListingPDF('${item.id}')">
+                🖨️
+              </button>
             </div>
           </div>
         </div>
@@ -504,9 +734,13 @@ function renderDemands() {
 
   if (state.demands.length === 0) {
     container.innerHTML = `
-      <div style="text-align: center; padding: 40px; background: #1a1e24; border-radius: 16px;">
-        <p style="color: #94a3b8;">Henüz kayıtlı müşteri talebi yok.</p>
-        <button class="btn-primary" style="margin-top: 10px;" onclick="openAddDemandModal()">+ İlk Talebi Gir</button>
+      <div style="text-align: center; padding: 50px 20px; background: #1a1e24; border-radius: 16px; border: 1px dashed #2e3540;">
+        <div style="font-size: 2.8rem; margin-bottom: 12px;">📋</div>
+        <h3 style="color: #fff; margin-bottom: 8px; font-size: 1.15rem;">Henüz Kayıtlı Müşteri Talebi Yok</h3>
+        <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 18px; max-width: 420px; margin-left: auto; margin-right: auto;">
+          Müşterilerinizin aradığı bütçe ve gayrimenkul kriterlerini buraya kaydedin; sistem mevcut ve yeni eklenen ilanlarla otomatik eşleştirsin.
+        </p>
+        <button class="btn-primary" onclick="openAddDemandModal()">➕ İlk Müşteri Talebini Gir</button>
       </div>
     `;
     return;
@@ -578,10 +812,12 @@ function renderMatches() {
 
   if (state.matches.length === 0) {
     container.innerHTML = `
-      <div style="text-align: center; padding: 40px; background: #1a1e24; border-radius: 16px;">
-        <div style="font-size: 2.2rem; margin-bottom: 8px;">🎯</div>
-        <h4 style="color: #fff; margin-bottom: 4px;">Henüz Otomatik Eşleşme Bulunmuyor</h4>
-        <p style="color: #94a3b8; font-size: 0.88rem;">Mustafa Konuk veya Ahmet Bey'in arsa talepleri havuzdaki uygun tarla ve arsalarla otomatik eşleştirilir.</p>
+      <div style="text-align: center; padding: 50px 20px; background: #1a1e24; border-radius: 16px; border: 1px dashed #2e3540;">
+        <div style="font-size: 2.8rem; margin-bottom: 12px;">🎯</div>
+        <h4 style="color: #fff; margin-bottom: 8px; font-size: 1.15rem;">Henüz Otomatik Eşleşme Bulunmuyor</h4>
+        <p style="color: #94a3b8; font-size: 0.9rem; max-width: 440px; margin-left: auto; margin-right: auto;">
+          Sisteme müşteri talebi ve portföy girildiğinde; bütçe, ilçe ve gayrimenkul türüne göre uyumlu olanlar burada anında eşleştirilir.
+        </p>
       </div>
     `;
     return;
@@ -649,10 +885,15 @@ function renderMuratDashboard() {
         <td><span style="font-weight: 700; color: var(--primary-light);">${c.listingCount} İlan</span></td>
         <td><span style="font-weight: 700; color: var(--accent-gold);">${c.demandCount} Talep</span></td>
         <td style="font-weight: 700; color: #10b981;">${formatTL(c.totalVolume)}</td>
-        <td>
+        <td style="display: flex; gap: 6px; align-items: center;">
           <button class="btn-primary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="filterByConsultant('${c.userId}')">
             İlanlarını Gör
           </button>
+          ${(c.userId !== 'u1' && (state.isAdminLoggedIn || (state.currentUser && state.currentUser.isAdmin))) ? `
+            <button class="icon-btn" style="color: #ef4444; padding: 4px 8px; font-size: 0.75rem;" title="Danışmanı Sil" onclick="deleteConsultant('${c.userId}')">
+              🗑️ Sil
+            </button>
+          ` : ''}
         </td>
       </tr>
     `).join('');
@@ -678,7 +919,12 @@ function closeModal(modalId) {
 
 function openAddListingModal() {
   state.newPhotos = [];
-  document.getElementById('upload-preview-strip').innerHTML = '';
+  renderPhotoPreviews('new');
+  updatePhotoPills();
+  const input = document.getElementById('new-photos-input');
+  if (input) input.value = '';
+  const urlInput = document.getElementById('new-photo-url-input');
+  if (urlInput) urlInput.value = '';
   document.getElementById('form-new-listing').reset();
   populateConsultantDropdowns();
   openModal('modal-add-listing');
@@ -722,34 +968,150 @@ function selectUser(userId) {
   }
 }
 
-// --- PHOTO UPLOAD HANDLING ---
-async function handlePhotoUpload(event) {
+// --- CLIENT-SIDE IMAGE COMPRESSION (Fast & Zero Failures) ---
+async function compressImageFile(file) {
+  return new Promise((resolve) => {
+    // If not image or smaller than 350KB, use original
+    if (!file.type || !file.type.startsWith('image/') || file.size < 350 * 1024) {
+      return resolve(file);
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 1920;
+        let width = img.width;
+        let height = img.height;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".jpg", { type: 'image/jpeg' }));
+          } else {
+            resolve(file);
+          }
+        }, 'image/jpeg', 0.85);
+      };
+      img.onerror = () => resolve(file);
+      img.src = e.target.result;
+    };
+    reader.onerror = () => resolve(file);
+    reader.readAsDataURL(file);
+  });
+}
+
+// --- ADVANCED PHOTO SELECTION & UPLOAD HANDLING ---
+async function handlePhotoSelect(event, mode = 'new') {
   const files = event.target.files;
   if (!files || files.length === 0) return;
 
-  const formData = new FormData();
-  for (let i = 0; i < files.length; i++) {
-    formData.append('photos', files[i]);
-  }
-
-  const previewStrip = document.getElementById('upload-preview-strip');
-  previewStrip.innerHTML = '<span style="color: var(--primary-light); font-size: 0.8rem;">Fotoğraflar yükleniyor...</span>';
+  state.isUploading = true;
+  const countBadge = document.getElementById(mode === 'new' ? 'new-photo-count-pill' : 'edit-photo-count-pill');
+  if (countBadge) countBadge.innerText = 'Fotoğraflar yükleniyor... ⏳';
 
   try {
+    const formData = new FormData();
+    for (let i = 0; i < files.length; i++) {
+      const compressed = await compressImageFile(files[i]);
+      formData.append('photos', compressed);
+    }
+
     const res = await fetch('/api/upload', {
       method: 'POST',
       body: formData
     });
+
     const data = await res.json();
-    if (data.urls) {
-      state.newPhotos = [...state.newPhotos, ...data.urls];
-      previewStrip.innerHTML = state.newPhotos.map(url => `
-        <img src="${url}" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1px solid var(--primary);">
-      `).join('');
+    if (data.urls && data.urls.length > 0) {
+      if (mode === 'new') {
+        state.newPhotos = [...state.newPhotos, ...data.urls];
+      } else {
+        state.editPhotos = [...state.editPhotos, ...data.urls];
+      }
+      renderPhotoPreviews(mode);
+    } else if (data.error) {
+      alert('Fotoğraf yükleme uyarısı: ' + data.error);
     }
   } catch (err) {
     console.error('Photo upload error:', err);
-    previewStrip.innerHTML = '<span style="color: #ef4444; font-size: 0.8rem;">Fotoğraf yüklenemedi.</span>';
+    alert('Fotoğraf sunucuya yüklenirken hata oluştu. Lütfen tekrar deneyin.');
+  } finally {
+    state.isUploading = false;
+    updatePhotoPills();
+    event.target.value = '';
+  }
+}
+
+function addPhotoByUrl(mode = 'new') {
+  const input = document.getElementById(mode === 'new' ? 'new-photo-url-input' : 'edit-photo-url-input');
+  const url = input ? input.value.trim() : '';
+  if (!url) {
+    alert('Lütfen geçerli bir görsel web linki girin.');
+    return;
+  }
+  if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('/uploads/')) {
+    alert('Geçerli bir web adresi girin (http:// veya https:// ile başlamalı)');
+    return;
+  }
+  if (mode === 'new') {
+    state.newPhotos.push(url);
+  } else {
+    state.editPhotos.push(url);
+  }
+  if (input) input.value = '';
+  renderPhotoPreviews(mode);
+  updatePhotoPills();
+}
+
+function removePhoto(index, mode = 'new') {
+  if (mode === 'new') {
+    state.newPhotos.splice(index, 1);
+  } else {
+    state.editPhotos.splice(index, 1);
+  }
+  renderPhotoPreviews(mode);
+  updatePhotoPills();
+}
+
+function renderPhotoPreviews(mode = 'new') {
+  const photos = mode === 'new' ? state.newPhotos : state.editPhotos;
+  const container = document.getElementById(mode === 'new' ? 'new-upload-preview-strip' : 'edit-upload-preview-strip');
+  if (!container) return;
+
+  if (photos.length === 0) {
+    container.innerHTML = '';
+    return;
+  }
+
+  container.innerHTML = photos.map((url, idx) => `
+    <div class="photo-preview-card ${idx === 0 ? 'cover' : ''}">
+      <img src="${url}" alt="Fotoğraf ${idx + 1}" onerror="this.onerror=null;this.src='/aysa_logo.png'">
+      ${idx === 0 ? '<div class="photo-cover-badge">Kapak</div>' : ''}
+      <button type="button" class="photo-remove-btn" onclick="removePhoto(${idx}, '${mode}')" title="Fotoğrafı Kaldır">✕</button>
+    </div>
+  `).join('');
+}
+
+function updatePhotoPills() {
+  const newPill = document.getElementById('new-photo-count-pill');
+  if (newPill) {
+    newPill.innerText = `${state.newPhotos.length} Fotoğraf Eklendi`;
+  }
+  const editPill = document.getElementById('edit-photo-count-pill');
+  if (editPill) {
+    editPill.innerText = `${state.editPhotos.length} Fotoğraf`;
   }
 }
 
@@ -763,9 +1125,19 @@ function handleTypeChange() {
   }
 }
 
-// --- SUBMIT NEW LISTING ---
+// --- SUBMIT NEW LISTING (Fotoğraf Garantili) ---
 async function submitNewListing(e) {
   e.preventDefault();
+
+  if (state.isUploading) {
+    alert('Fotoğraflarınız henüz yükleniyor. Lütfen 1-2 saniye bekleyin...');
+    return;
+  }
+
+  const btn = document.getElementById('btn-submit-listing');
+  const originalText = btn.innerText;
+  btn.disabled = true;
+  btn.innerText = 'Portföy Kaydediliyor... ⏳';
 
   const consultantId = document.getElementById('new-consultant').value;
   const consultant = state.users.find(u => u.id === consultantId) || state.currentUser;
@@ -779,7 +1151,7 @@ async function submitNewListing(e) {
     rooms: document.getElementById('new-rooms') ? document.getElementById('new-rooms').value : '-',
     floor: document.getElementById('new-floor') ? document.getElementById('new-floor').value : '-',
     city: 'Balıkesir',
-    district: document.getElementById('new-district').value.trim(),
+    district: document.getElementById('new-district').value.trim() || 'Altıeylül',
     neighborhood: document.getElementById('new-neighborhood').value.trim(),
     ada: document.getElementById('new-ada').value.trim(),
     parsel: document.getElementById('new-parsel').value.trim(),
@@ -799,14 +1171,144 @@ async function submitNewListing(e) {
 
     if (res.ok) {
       closeModal('modal-add-listing');
+      state.newPhotos = [];
+      renderPhotoPreviews('new');
+      updatePhotoPills();
+      document.getElementById('form-new-listing').reset();
       await loadListings();
       await loadMatches();
       await loadStats();
-      alert('✅ Portföy başarıyla havuza eklendi!');
+      showToastNotification({
+        title: '✅ Portföy Eklendi',
+        message: `${payload.title} başarıyla havuza kaydedildi!`
+      });
+      alert('✅ Portföy fotoğraflarıyla birlikte başarıyla havuza eklendi!');
+    } else {
+      const err = await res.json();
+      alert('İlan kaydedilemedi: ' + (err.error || 'Bilinmeyen hata'));
     }
   } catch (err) {
     console.error('Submit listing error:', err);
-    alert('Hata oluştu, lütfen tekrar deneyin.');
+    alert('Hata oluştu, lütfen internet bağlantınızı kontrol edip tekrar deneyin.');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = originalText;
+  }
+}
+
+// --- EDIT LISTING FUNCTIONS ---
+function openEditListingModal(id) {
+  const item = state.listings.find(l => l.id === id);
+  if (!item) return;
+
+  document.getElementById('edit-listing-id').value = item.id;
+  document.getElementById('edit-title').value = item.title || '';
+  document.getElementById('edit-type').value = item.type || 'Konut';
+  document.getElementById('edit-status').value = item.status || 'Satılık';
+  document.getElementById('edit-price').value = item.price || '';
+  document.getElementById('edit-m2').value = item.m2 || '';
+  if (document.getElementById('edit-rooms')) document.getElementById('edit-rooms').value = item.rooms || '-';
+  if (document.getElementById('edit-floor')) document.getElementById('edit-floor').value = item.floor || '';
+  document.getElementById('edit-district').value = item.district || 'Altıeylül';
+  document.getElementById('edit-neighborhood').value = item.neighborhood || '';
+  document.getElementById('edit-ada').value = item.ada || '';
+  document.getElementById('edit-parsel').value = item.parsel || '';
+  document.getElementById('edit-internal-notes').value = item.internalNotes || '';
+
+  const select = document.getElementById('edit-consultant');
+  if (select) {
+    select.innerHTML = state.users.map(u => `
+      <option value="${u.id}" ${item.consultantId === u.id ? 'selected' : ''}>
+        ${u.name} (${u.role})
+      </option>
+    `).join('');
+  }
+
+  handleEditTypeChange();
+
+  state.editPhotos = Array.isArray(item.photos) ? [...item.photos] : [];
+  renderPhotoPreviews('edit');
+  updatePhotoPills();
+
+  openModal('modal-edit-listing');
+}
+
+function handleEditTypeChange() {
+  const type = document.getElementById('edit-type').value;
+  const rowRooms = document.getElementById('row-edit-rooms-floor');
+  if (rowRooms) {
+    if (type === 'Arsa' || type === 'Tarla') {
+      rowRooms.style.display = 'none';
+    } else {
+      rowRooms.style.display = 'grid';
+    }
+  }
+}
+
+async function submitEditListing(e) {
+  e.preventDefault();
+
+  if (state.isUploading) {
+    alert('Fotoğraflarınız henüz yükleniyor. Lütfen bekleyin...');
+    return;
+  }
+
+  const id = document.getElementById('edit-listing-id').value;
+  const btn = document.getElementById('btn-submit-edit');
+  const originalText = btn.innerText;
+  btn.disabled = true;
+  btn.innerText = 'Güncelleniyor... ⏳';
+
+  const consultantId = document.getElementById('edit-consultant').value;
+  const consultant = state.users.find(u => u.id === consultantId) || state.currentUser;
+
+  const payload = {
+    title: document.getElementById('edit-title').value.trim(),
+    type: document.getElementById('edit-type').value,
+    status: document.getElementById('edit-status').value,
+    price: Number(document.getElementById('edit-price').value),
+    m2: Number(document.getElementById('edit-m2').value),
+    rooms: document.getElementById('edit-rooms') ? document.getElementById('edit-rooms').value : '-',
+    floor: document.getElementById('edit-floor') ? document.getElementById('edit-floor').value : '-',
+    district: document.getElementById('edit-district').value.trim() || 'Altıeylül',
+    neighborhood: document.getElementById('edit-neighborhood').value.trim(),
+    ada: document.getElementById('edit-ada').value.trim(),
+    parsel: document.getElementById('edit-parsel').value.trim(),
+    consultantId: consultant.id,
+    consultantName: consultant.name,
+    consultantPhone: consultant.phone,
+    internalNotes: document.getElementById('edit-internal-notes').value.trim(),
+    photos: state.editPhotos
+  };
+
+  try {
+    const res = await fetch(`/api/listings/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+
+    if (res.ok) {
+      closeModal('modal-edit-listing');
+      await loadListings();
+      await loadMatches();
+      await loadStats();
+      openListingDetail(id);
+      showToastNotification({
+        title: '✅ Portföy Güncellendi',
+        message: `${payload.title} güncellendi!`
+      });
+      alert('✅ Portföy başarıyla güncellendi!');
+    } else {
+      const err = await res.json();
+      alert('Güncelleme hatası: ' + (err.error || 'Bilinmeyen hata'));
+    }
+  } catch (err) {
+    console.error('Edit error:', err);
+    alert('Bağlantı hatası.');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = originalText;
   }
 }
 
@@ -866,39 +1368,117 @@ async function deleteDemand(id) {
   }
 }
 
+// --- CLIENT SHARING & WHATSAPP GENERATOR ---
+function getListingShareUrl(listingId) {
+  const isCloud = window.location.origin && !window.location.origin.includes('localhost') && !window.location.origin.includes('127.0.0.1');
+  const origin = isCloud ? window.location.origin : ((state.serverInfo && state.serverInfo.networkUrl) ? state.serverInfo.networkUrl : window.location.origin);
+  return `${origin}/?listing=${listingId}&client=1`;
+}
+
+function shareListingWhatsApp(id) {
+  const item = state.listings.find(l => l.id === id);
+  if (!item) return;
+
+  const shareUrl = getListingShareUrl(id);
+  const specs = [];
+  if (item.m2) specs.push(`${item.m2} m²`);
+  if (item.rooms && item.rooms !== '-') specs.push(item.rooms);
+  if (item.floor && item.floor !== '-') specs.push(item.floor);
+  if (item.ada || item.parsel) specs.push(`Ada: ${item.ada || '-'}/Parsel: ${item.parsel || '-'}`);
+
+  const msg = 
+`🏢 *AYSA GLOBAL GAYRİMENKUL*
+📍 *Balıkesir / ${item.district || 'Altıeylül'} - ${item.neighborhood || ''}*
+
+🌟 *${item.title}*
+🏷️ *Durum:* ${item.status} ${item.type}
+💰 *Fiyat:* ${formatTL(item.price)}
+📐 *Özellikler:* ${specs.join(' • ')}
+
+👤 *Portföy Danışmanı:* ${item.consultantName}
+📞 *İletişim:* ${item.consultantPhone || '0532 111 22 33'}
+
+🔗 *Fotoğraflar ve Detaylar İçin İnceleyin:*
+${shareUrl}`;
+
+  const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+  window.open(waUrl, '_blank');
+}
+
+async function copyListingLink(id) {
+  const shareUrl = getListingShareUrl(id);
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(shareUrl);
+    } else {
+      const input = document.createElement('input');
+      input.value = shareUrl;
+      document.body.appendChild(input);
+      input.select();
+      document.execCommand('copy');
+      document.body.removeChild(input);
+    }
+    showToastNotification({
+      title: '📋 Link Kopyalandı',
+      message: 'Müşteriye paylaşabileceğiniz direkt ilan linki panoya kopyalandı!'
+    });
+    alert('📋 Müşteri paylaşım linki panoya kopyalandı:\n\n' + shareUrl);
+  } catch (err) {
+    prompt('Müşteri paylaşım linki:', shareUrl);
+  }
+}
+
 // --- LISTING DETAIL MODAL ---
 function openListingDetail(id) {
   const item = state.listings.find(l => l.id === id);
   if (!item) return;
 
   const content = document.getElementById('detail-modal-content');
-  const photos = item.photos && item.photos.length > 0 ? item.photos : ['/aysa_logo.png'];
+  const hasPhotos = item.photos && item.photos.length > 0;
+  const photos = hasPhotos ? item.photos : [];
   const hasAdaParsel = item.ada || item.parsel;
+  const isSatilik = trNormalize(item.status).includes('sat');
 
   content.innerHTML = `
-    <div class="detail-gallery">
-      <img id="detail-main-img" src="${photos[0]}" alt="${item.title}">
-    </div>
-    ${photos.length > 1 ? `
-      <div style="display: flex; gap: 8px; overflow-x: auto; padding: 4px 0;">
-        ${photos.map((p, idx) => `
-          <img src="${p}" style="width: 55px; height: 55px; border-radius: 6px; object-fit: cover; cursor: pointer; border: 2px solid ${idx === 0 ? 'var(--primary)' : 'transparent'};" onclick="document.getElementById('detail-main-img').src='${p}'">
-        `).join('')}
+    <!-- Fotoğraf Galerisi / Görsel Durumu -->
+    ${hasPhotos ? `
+      <div class="detail-gallery">
+        <img id="detail-main-img" src="${photos[0]}" alt="${item.title}" onerror="this.onerror=null;this.src='/aysa_logo.png'">
       </div>
-    ` : ''}
+      ${photos.length > 1 ? `
+        <div style="display: flex; gap: 8px; overflow-x: auto; padding: 6px 0;">
+          ${photos.map((p, idx) => `
+            <img src="${p}" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; cursor: pointer; border: 2px solid ${idx === 0 ? 'var(--primary)' : '#2e3540'};" onclick="document.getElementById('detail-main-img').src='${p}'" onerror="this.onerror=null;this.src='/aysa_logo.png'">
+          `).join('')}
+        </div>
+      ` : ''}
+    ` : `
+      <div class="detail-gallery" style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; border-radius: 12px; border: 1px dashed #334155; padding: 20px; text-align: center;">
+        <img src="/aysa_logo.png" style="height: 52px; object-fit: contain; opacity: 0.9; margin-bottom: 10px;">
+        <div style="font-weight: 700; color: #fff; font-size: 1.05rem;">Bu İlanda Henüz Fotoğraf Yok</div>
+        <p style="font-size: 0.85rem; color: #94a3b8; margin: 4px 0 12px 0;">Saha fotoğraflarını yüklemek için aşağıdaki 'Portföyü Düzenle' butonunu kullanabilirsiniz.</p>
+        ${!state.isClientView ? `
+          <button class="btn-primary" onclick="openEditListingModal('${item.id}')" style="font-size: 0.85rem; padding: 8px 18px;">
+            📷 Fotoğraf Ekle / Düzenle
+          </button>
+        ` : ''}
+      </div>
+    `}
 
-    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 6px;">
-      <h2 style="font-size: 1.6rem; font-weight: 800; color: #fff;">${formatTL(item.price)}</h2>
-      <span class="badge-tag ${item.status.toLowerCase() === 'satılık' ? 'satilik' : 'kiralik'}">${item.status} ${item.type}</span>
+    <!-- Fiyat & Kategori Başlığı -->
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 14px;">
+      <h2 style="font-size: 1.7rem; font-weight: 800; color: #fff;">${formatTL(item.price)}</h2>
+      <span class="badge-tag ${isSatilik ? 'satilik' : 'kiralik'}">${item.status} ${item.type}</span>
     </div>
 
-    <h3 style="font-size: 1.15rem; font-weight: 700; color: var(--text-main); line-height: 1.35;">${item.title}</h3>
+    <h3 style="font-size: 1.18rem; font-weight: 700; color: var(--text-main); line-height: 1.35; margin-top: 2px;">${item.title}</h3>
     
-    <div style="color: #94a3b8; font-size: 0.88rem; display: flex; align-items: center; gap: 6px;">
+    <div style="color: #94a3b8; font-size: 0.9rem; display: flex; align-items: center; gap: 6px; margin-top: 4px;">
       📍 Balıkesir / ${item.district || 'Altıeylül'} • <strong>${item.neighborhood || ''}</strong>
     </div>
 
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: #111316; padding: 12px; border-radius: 10px; border: 1px solid #2e3540;">
+    <!-- Özellik Kutusu -->
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; background: #111316; padding: 14px; border-radius: 12px; border: 1px solid #2e3540; margin-top: 12px;">
       <div>
         <span style="font-size: 0.75rem; color: #94a3b8;">Alan:</span>
         <div style="font-weight: 700; color: #fff;">${item.m2} m²</div>
@@ -920,48 +1500,70 @@ function openListingDetail(id) {
         <div style="font-weight: 700; color: #fff;">${item.floor || '-'}</div>
       </div>
       <div>
-        <span style="font-size: 0.75rem; color: #94a3b8;">Excel Sıra No:</span>
+        <span style="font-size: 0.75rem; color: #94a3b8;">Sıra No:</span>
         <div style="font-weight: 700; color: #fff;">#${item.sira || '-'}</div>
       </div>
     </div>
 
-    <!-- Murat Özcan Özel Butonları -->
-    <div class="detail-actions-bar">
-      <button class="btn-detail-pdf" onclick="printSingleListingPDF('${item.id}')">
-        🖨️ Murat Özcan İçin PDF Portföy Yazdır
+    <!-- MÜŞTERİ PAYLAŞIM & AKSIYON SUITI -->
+    <div class="detail-actions-suite" style="margin-top: 14px;">
+      <button class="btn-action-suite" style="background: #2563eb; color: #fff;" onclick="openListingQrModal('${item.id}')">
+        📱 Müşteri Sunum QR Kodu
       </button>
-      ${hasAdaParsel ? `
-        <a href="https://parselsorgu.tkgm.gov.tr/" target="_blank" class="btn-detail-tkgm">
-          🔍 TKGM Parsel Sorgu (Ada: ${item.ada} / Parsel: ${item.parsel})
-        </a>
+      <button class="btn-action-suite btn-whatsapp-suite" onclick="shareListingWhatsApp('${item.id}')">
+        💬 Müşteriye WhatsApp ile Gönder
+      </button>
+      <button class="btn-action-suite btn-copy-suite" onclick="copyListingLink('${item.id}')">
+        🔗 Müşteri Linkini Kopyala
+      </button>
+      ${!state.isClientView ? `
+        <button class="btn-action-suite btn-edit-suite" onclick="openEditListingModal('${item.id}')">
+          ✏️ Portföyü Düzenle
+        </button>
+        <button class="btn-action-suite btn-pdf-suite" onclick="printSingleListingPDF('${item.id}')">
+          🖨️ PDF Broşür Yazdır
+        </button>
       ` : ''}
     </div>
 
-    <!-- Ofis İçi Gizli Notlar -->
-    ${item.internalNotes ? `
-      <div class="detail-notes-box">
-        <h5>🔒 Ofis İçi Özel Notlar (Müşteriye Gösterilmez)</h5>
-        <p>${item.internalNotes}</p>
+    ${hasAdaParsel ? `
+      <div style="margin-top: 10px;">
+        <a href="https://parselsorgu.tkgm.gov.tr/" target="_blank" class="parsel-btn-tkgm" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+          🔍 TKGM Parsel Sorgu Sayfasında Aç (Ada: ${item.ada} / Parsel: ${item.parsel})
+        </a>
+      </div>
+    ` : ''}
+
+    <!-- Ofis İçi Gizli Notlar (Müşteriye paylaşılmaz) -->
+    ${(!state.isClientView && item.internalNotes) ? `
+      <div class="detail-notes-box" style="margin-top: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+          <h5 style="color: var(--accent-gold); font-size: 0.85rem; font-weight: 700;">🔒 Ofis İçi Gizli Notlar</h5>
+          <small style="color: #64748b; font-size: 0.72rem;">Sadece ekip görür, müşteriye gönderilmez</small>
+        </div>
+        <p style="color: #cbd5e1; font-size: 0.88rem; margin: 0;">${item.internalNotes}</p>
       </div>
     ` : ''}
 
     <!-- Portföy Sorumlusu Danışman Künyesi -->
-    <div style="background: #111316; border: 1px solid #2e3540; border-radius: 12px; padding: 14px; display: flex; align-items: center; justify-content: space-between;">
+    <div style="background: #111316; border: 1px solid #2e3540; border-radius: 12px; padding: 14px; display: flex; align-items: center; justify-content: space-between; margin-top: 14px;">
       <div style="display: flex; align-items: center; gap: 10px;">
-        <div class="user-avatar-circle" style="width: 38px; height: 38px; font-size: 0.95rem;">${item.consultantName.substring(0, 2)}</div>
+        <div class="user-avatar-circle" style="width: 42px; height: 42px; font-size: 1rem;">${item.consultantName ? item.consultantName.substring(0, 2) : 'AY'}</div>
         <div>
           <span style="font-size: 0.72rem; color: #94a3b8; text-transform: uppercase;">Portföy Sahibi Danışman</span>
           <div style="color: #fff; font-weight: 700; font-size: 0.95rem;">${item.consultantName}</div>
-          <div style="color: var(--primary-light); font-size: 0.8rem;">${item.consultantPhone || ''}</div>
+          <div style="color: var(--primary-light); font-size: 0.82rem;">${item.consultantPhone || ''}</div>
         </div>
       </div>
-      <div style="display: flex; gap: 8px;">
+      <div style="display: flex; gap: 8px; align-items: center;">
         ${item.consultantPhone ? `
           <a href="tel:${item.consultantPhone}" class="icon-btn" title="Telefonla Ara">📞</a>
           <a href="https://wa.me/90${item.consultantPhone.replace(/[^0-9]/g, '')}" target="_blank" class="icon-btn" title="WhatsApp" style="color: #10b981;">💬</a>
         ` : ''}
-        ${state.isAdminLoggedIn || (state.currentUser && state.currentUser.name === item.consultantName) ? `
-          <button class="icon-btn" style="color: #ef4444;" title="İlanı Sil" onclick="deleteListing('${item.id}')">🗑️</button>
+        ${(!state.isClientView && (state.isAdminLoggedIn || (state.currentUser && state.currentUser.isAdmin))) ? `
+          <button class="icon-btn" style="color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); padding: 6px 10px; border-radius: 8px;" title="İlanı Kaldır (Yönetici Yetkisi)" onclick="deleteListing('${item.id}')">
+            🗑️ Kaldır
+          </button>
         ` : ''}
       </div>
     </div>
@@ -971,7 +1573,12 @@ function openListingDetail(id) {
 }
 
 async function deleteListing(id) {
-  if (!confirm('Bu portföyü havuzdan silmek istediğinize emin misiniz?')) return;
+  if (!state.isAdminLoggedIn && (!state.currentUser || !state.currentUser.isAdmin)) {
+    alert('İlan kaldırma yetkisi sadece MURAT ÖZCAN (ADMİN) kullanıcısına aittir.\nLütfen Yönetim Girişi yapınız.');
+    openModal('modal-admin-login');
+    return;
+  }
+  if (!confirm('Bu portföyü havuzdan tamamen kaldırmak istediğinize emin misiniz?')) return;
   try {
     const res = await fetch(`/api/listings/${id}`, { method: 'DELETE' });
     if (res.ok) {
@@ -979,7 +1586,7 @@ async function deleteListing(id) {
       await loadListings();
       await loadMatches();
       await loadStats();
-      alert('İlan silindi.');
+      alert('İlan başarıyla kaldırıldı.');
     }
   } catch (e) {
     console.error('Delete error:', e);
@@ -1067,12 +1674,12 @@ function printAllPortfolioPDF() {
         <img src="/aysa_logo.png" alt="AYSA Global Logo">
         <div>
           <h1 style="font-size: 20pt; margin: 0; color: #1b75bb;">AYSA GLOBAL GAYRİMENKUL</h1>
-          <p style="margin: 0; font-size: 9pt; color: #666;">Balıkesir Altıeylül Güncel Excel Portföy Listesi</p>
+          <p style="margin: 0; font-size: 9pt; color: #666;">Balıkesir Altıeylül Güncel Portföy Listesi</p>
         </div>
       </div>
       <div class="print-header-info">
         <h2>YÖNETİCİ PORTFÖY RAPORU</h2>
-        <p>Rapor Alan: Murat Özcan (Patron)</p>
+        <p>Rapor Alan: MURAT ÖZCAN (ADMİN)</p>
         <p>Tarih: ${now}</p>
       </div>
     </div>

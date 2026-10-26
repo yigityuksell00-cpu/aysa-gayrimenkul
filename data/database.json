@@ -1,13 +1,13 @@
 {
   "adminCredentials": {
-    "username": "murat",
-    "password": "123"
+    "username": "admin",
+    "password": "2026"
   },
   "users": [
     {
       "id": "u1",
       "name": "Murat Özcan",
-      "role": "Patron / Ofis Sahibi",
+      "role": "MURAT ÖZCAN (ADMİN)",
       "phone": "0532 111 22 33",
       "avatar": "MÖ",
       "isAdmin": true
@@ -39,28 +39,40 @@
   ],
   "notifications": [
     {
-      "id": "notif-1792779010630",
-      "sender": "Murat Özcan (Patron)",
-      "title": "test",
-      "message": "test",
-      "createdAt": "2026-10-23T18:10:10.631Z"
-    },
-    {
-      "id": "notif-1",
-      "sender": "Murat Özcan (Patron)",
-      "title": "Haftalık Ofis Toplantısı",
-      "message": "Pazartesi saat 10:30'da Altıeylül portföyleri ve yeni arsa talepleri için ofiste toplanıyoruz.",
-      "createdAt": "2026-10-23T14:00:00Z"
-    },
-    {
-      "id": "notif-2",
-      "sender": "Murat Özcan (Patron)",
-      "title": "Yeni Arsa Portföyü Eklendi",
-      "message": "Köseler Mh. 876 m² arsamız sisteme girildi. Mustafa Bey ve Ahmet Bey'e sunum yapabilirsiniz.",
-      "createdAt": "2026-10-23T16:30:00Z"
+      "id": "notif-welcome",
+      "sender": "MURAT ÖZCAN (ADMİN)",
+      "title": "AYSA Gayrimenkul Mobil Ofis Sistemi Devrede",
+      "message": "Altıeylül portföy havuzumuz aktif edilmiştir. Portföyleri inceleyebilir, fotoğraflarını güncelleyebilir ve müşterilerinize sunum yapabilirsiniz.",
+      "createdAt": "2026-10-24T23:53:15.086Z"
     }
   ],
   "listings": [
+    {
+      "id": "lst-1792946726542",
+      "sira": 17,
+      "title": "test",
+      "type": "Konut",
+      "status": "Satılık",
+      "price": 123,
+      "m2": 123,
+      "rooms": "2+1",
+      "floor": "-",
+      "city": "Balıkesir",
+      "district": "Altıeylül",
+      "neighborhood": "ha",
+      "ada": "",
+      "parsel": "",
+      "consultantId": "u2",
+      "consultantName": "Deniz Özdemir",
+      "consultantPhone": "0533 444 55 66",
+      "features": [],
+      "internalNotes": "",
+      "photos": [
+        "/uploads/aysa_1792946722131_41135.jpg"
+      ],
+      "createdAt": "2026-10-25T16:45:26.542Z",
+      "isNew": true
+    },
     {
       "id": "lst-01",
       "sira": 1,
@@ -85,9 +97,7 @@
         "Ulaşımı Kolay"
       ],
       "internalNotes": "Ulaşımı çok kolay. Kadastro yolu açılmış. Yanında sulama kanalı geçiyor.",
-      "photos": [
-        "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-23T10:00:00Z",
       "isNew": true
     },
@@ -115,9 +125,7 @@
         "Kombili"
       ],
       "internalNotes": "70 m² net / 80 m² brüt. Pazarlık payı cüzi.",
-      "photos": [
-        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-23T09:30:00Z",
       "isNew": true
     },
@@ -145,9 +153,7 @@
         "Elektrik Su Yakın"
       ],
       "internalNotes": "Murat Özcan portföyü. Ahmet Bey ve Mustafa Bey'e önerilebilir.",
-      "photos": [
-        "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-23T08:00:00Z",
       "isNew": true
     },
@@ -175,9 +181,7 @@
         "Ebeveyn Banyolu"
       ],
       "internalNotes": "78 net / 119 brüt. Çok temiz, masrafsız daire.",
-      "photos": [
-        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-22T17:00:00Z",
       "isNew": true
     },
@@ -205,9 +209,7 @@
         "Yatırıma Uygun"
       ],
       "internalNotes": "2.354 m² tek tapu. Kelepir fiyat.",
-      "photos": [
-        "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-22T15:30:00Z",
       "isNew": true
     },
@@ -235,9 +237,7 @@
         "Kombili"
       ],
       "internalNotes": "70/80 m². Murat bey portföyü.",
-      "photos": [
-        "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-22T14:10:00Z",
       "isNew": true
     },
@@ -265,9 +265,7 @@
         "Balkonlu"
       ],
       "internalNotes": "Yıldız mahallesinde aranan sokakta.",
-      "photos": [
-        "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-22T12:00:00Z",
       "isNew": true
     },
@@ -295,9 +293,7 @@
         "Geniş Balkonlu"
       ],
       "internalNotes": "AVM ve üniversite minibüslerine çok yakın. Kurumsal kiracı tercih sebebi.",
-      "photos": [
-        "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-22T11:00:00Z",
       "isNew": true
     },
@@ -325,9 +321,7 @@
         "Kombili"
       ],
       "internalNotes": "Plevne mahallesinde okul ve marketlere komşu.",
-      "photos": [
-        "https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-22T10:15:00Z",
       "isNew": true
     },
@@ -355,9 +349,7 @@
         "İnşaata Hazır"
       ],
       "internalNotes": "Ada: 11326 / Parsel: 18. Müteahhit Mustafa Abi'ye sunulabilir.",
-      "photos": [
-        "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-21T16:00:00Z",
       "isNew": false
     },
@@ -385,9 +377,7 @@
         "Geniş"
       ],
       "internalNotes": "Fiyatı çok makul tutuldu, hızlı satılık.",
-      "photos": [
-        "https://images.unsplash.com/photo-1600585154526-990dced4db0d?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-21T14:00:00Z",
       "isNew": false
     },
@@ -414,9 +404,7 @@
         "Kira Getirisi Yüksek"
       ],
       "internalNotes": "60 net / 65 brüt. Yatırımcı için uygun.",
-      "photos": [
-        "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-21T11:00:00Z",
       "isNew": false
     },
@@ -444,9 +432,7 @@
         "Balkonlu"
       ],
       "internalNotes": "Temiz aile kiracısı aranıyor.",
-      "photos": [
-        "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-20T16:00:00Z",
       "isNew": false
     },
@@ -474,9 +460,7 @@
         "Geniş Alan"
       ],
       "internalNotes": "80 net / 100 brüt. Müstakil yaşamak isteyenler için.",
-      "photos": [
-        "https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-20T14:30:00Z",
       "isNew": false
     },
@@ -504,9 +488,7 @@
         "Kira Getirisi Yüksek"
       ],
       "internalNotes": "Murat bey portföyü. Bahçelievler'de çok iyi lokasyon.",
-      "photos": [
-        "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-20T11:00:00Z",
       "isNew": false
     },
@@ -534,9 +516,7 @@
         "Yola Cepheli"
       ],
       "internalNotes": "Ada: 121 / Parsel: 116. Sarıalan'da harika konumda.",
-      "photos": [
-        "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80"
-      ],
+      "photos": [],
       "createdAt": "2026-10-20T09:00:00Z",
       "isNew": false
     }

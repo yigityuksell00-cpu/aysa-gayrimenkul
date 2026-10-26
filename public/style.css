@@ -1529,3 +1529,252 @@ body {
     color: #1b75bb;
   }
 }
+
+/* ===================================================
+   GELİŞMİŞ FOTOĞRAF YÜKLEME & ÖNİZLEME STİLLERİ
+=================================================== */
+.photo-upload-section {
+  background: rgba(17, 19, 22, 0.7);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.photo-upload-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.photo-upload-header label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 0;
+}
+
+.photo-count-pill {
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: var(--primary-glow);
+  color: var(--primary-light);
+  border: 1px solid var(--primary);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.photo-dropzone {
+  border: 2px dashed #3b4252;
+  background: rgba(26, 30, 36, 0.6);
+  border-radius: 12px;
+  padding: 20px 14px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.photo-dropzone:hover {
+  border-color: var(--primary);
+  background: rgba(27, 117, 187, 0.08);
+}
+
+.dropzone-icon {
+  font-size: 1.8rem;
+}
+
+.dropzone-text strong {
+  display: block;
+  font-size: 0.92rem;
+  color: #fff;
+}
+
+.dropzone-text span {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.photo-url-bar {
+  display: flex;
+  gap: 8px;
+}
+
+.photo-url-bar input {
+  font-size: 0.82rem;
+}
+
+.photo-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(75px, 1fr));
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.photo-preview-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1/1;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 2px solid #2e3540;
+  background: #000;
+}
+
+.photo-preview-card.cover {
+  border-color: var(--primary);
+  box-shadow: 0 0 8px var(--primary-glow);
+}
+
+.photo-preview-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.photo-cover-badge {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(27, 117, 187, 0.9);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-align: center;
+  padding: 2px 0;
+  text-transform: uppercase;
+}
+
+.photo-remove-btn {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 22px;
+  height: 22px;
+  background: rgba(239, 68, 68, 0.9);
+  color: #fff;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+  z-index: 5;
+}
+
+.photo-remove-btn:hover {
+  transform: scale(1.15);
+  background: #dc2626;
+}
+
+/* Filter Clear Button */
+.chip-clear-btn {
+  background: transparent;
+  color: #ef4444;
+  border: 1px dashed rgba(239, 68, 68, 0.4);
+  padding: 6px 12px;
+  border-radius: var(--radius-full);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chip-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+}
+
+/* Müşteri Paylaşım & Detay Aksiyon Butonları */
+.detail-actions-suite {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+@media (max-width: 540px) {
+  .detail-actions-suite {
+    grid-template-columns: 1fr;
+  }
+}
+
+.btn-action-suite {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-whatsapp-suite {
+  background: #10b981;
+  color: #ffffff;
+}
+
+.btn-whatsapp-suite:hover {
+  background: #059669;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.btn-copy-suite {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+.btn-copy-suite:hover {
+  border-color: var(--primary);
+  background: #334155;
+}
+
+.btn-edit-suite {
+  background: #f59e0b;
+  color: #111316;
+}
+
+.btn-edit-suite:hover {
+  background: #d97706;
+}
+
+.btn-pdf-suite {
+  background: #1b75bb;
+  color: #ffffff;
+}
+
+.btn-pdf-suite:hover {
+  background: #155d96;
+}
+
+/* Müşteri Sunum Görünüm Modu Bannerı */
+.client-mode-bar {
+  background: linear-gradient(90deg, #1b75bb, #10b981);
+  color: #ffffff;
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
